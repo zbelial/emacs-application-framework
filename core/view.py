@@ -36,7 +36,7 @@ class View(QWidget):
 
         # Init widget attributes.
         if platform.system() == "Darwin":
-            self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.NoDropShadowWindowHint)
         else:
             self.setWindowFlags(Qt.FramelessWindowHint)
 
@@ -114,7 +114,7 @@ class View(QWidget):
         # print(time.time(), event.type())
 
         if event.type() in [QEvent.ShortcutOverride]:
-            eval_in_emacs('eaf-activate-emacs-window', [])
+            eval_in_emacs('eaf-activate-emacs-window', [self.buffer_id])
 
         # Focus emacs buffer when user click view.
         event_type = [QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseButtonDblClick]

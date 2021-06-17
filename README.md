@@ -7,8 +7,10 @@ English | [简体中文](./README.zh-CN.md)
 # Emacs Application Framework
 Emacs Application Framework (EAF) is a GUI application framework for Emacs that revolutionizes its multimedia and graphical capabilities to ultimately *Live in Emacs*.
 
+EAF supports Linux, Windows, and MacOS.
+
 ## EAF Vision
-Emacs, the extensible *text editor*, is more than 45 years old, older than most operating systems people use today, as old as the first UNIX system. During the 45 years of development, the brightest hackers from all over the world had been contributing their intelligence and imagination, together constructed the most comprehensive and rich ecosystem that you can find in any software to date.
+Emacs, the extensible *text editor*, is more than 45 years old, older than most operating systems people use today, as old as the first UNIX system. During the 45 years of development, the brightest hackers from all over the world have been contributing their intelligence and imagination, together constructed the most comprehensive and rich ecosystem that you can find in any software to date.
 
 If you are a hacker who works with numerous programming languages, who desires maximum freedom, extensibility and introspectivity into your tools, and into keyboard/text centrism, Emacs will be your best bet.
 
@@ -18,7 +20,7 @@ The vision of the EAF project is that, while retaining the culture and the ecosy
 
 
 ## Application Showcase
-EAF is an extensible framework, it comes with a number of useful applications, and you can develop any Qt5 application and integrate it into Emacs.
+EAF is an extensible framework. It comes with a number of useful applications, and you can develop any Qt5 application and integrate it into Emacs.
 
 | Browser                                          | Markdown Previewer (support Mermaid and PlantUML)                                          |
 | :--------:                                       | :----:                                                      |
@@ -61,6 +63,11 @@ EAF is an extensible framework, it comes with a number of useful applications, a
 | <img src="./screenshot/jupyter.png" width="400"> | <img src="./screenshot/eaf-interleave.gif" width="400"> |
 |                                                  |                                                         |
 
+| Music Player                                          | System Monitor |
+| :--------:                                            | :--------:     |
+| <img src="./screenshot/music_player.png" width="400"> | <img src="./screenshot/system_monitor.png" width="400">          |
+|                                                       |                |
+
 ## EmacsConf2020 - Extend Emacs to Modern GUI Applications with EAF
 - EAF talk & demo at EmacsConf2020, presented to you by [MatthewZMD](https://github.com/MatthewZMD)
 - Homepage (Q&A included): https://emacsconf.org/2020/talks/34/
@@ -70,36 +77,45 @@ EAF is an extensible framework, it comes with a number of useful applications, a
 
 ## Install
 1. Download EAF
-```Bash
-git clone --depth=1 -b master https://github.com/manateelazycat/emacs-application-framework.git ~/.emacs.d/site-lisp/emacs-application-framework/
-```
+
+    ```Bash
+    git clone --depth=1 -b master https://github.com/manateelazycat/emacs-application-framework.git ~/.emacs.d/site-lisp/emacs-application-framework/
+    ```
 
 Alternatively, you can use a [Quelpa recipe](https://github.com/quelpa/quelpa)
-```Emacs-lisp
-(quelpa '(eaf :fetcher github
-              :repo  "manateelazycat/emacs-application-framework"
-              :files ("*")))
-```
+
+    ```Emacs-lisp
+    (quelpa '(eaf :fetcher github
+                  :repo  "manateelazycat/emacs-application-framework"
+                  :files ("*")))
+    ```
 
 2. Install EAF dependencies using `M-x eaf-install-dependencies`.
 
 If you prefer to manually call the installation script in the terminal,
 
 - If you use GNU/Linux,
-    - Arch-based systems: [AUR](https://aur.archlinux.org/packages/emacs-application-framework-git/)
-    - Others:
-      ```Bash
-      cd emacs-application-framework
-      chmod +x ./install-eaf.sh
-      ./install-eaf.sh
-      ```
+
+    ```Bash
+    cd emacs-application-framework
+    chmod +x ./install-eaf.sh
+    ./install-eaf.sh
+    ```
 
 - If you use Windows,
 
-```shell
-cd emacs-application-framework
-node ./install-eaf-win32.js
-```
+    ```Bash
+    cd emacs-application-framework
+    node ./install-eaf-win32.js
+    ```
+
+- If you use macOS,
+
+    ```Bash
+    cd emacs-application-framework
+    chmod +x ./install-eaf-mac.sh
+    ./install-eaf-mac.sh
+    ```
 
 Feel free to inspect the install script yourself. An explanation of each dependency can be found at [Dependency List](#dependency-list).
 
@@ -111,50 +127,52 @@ Feel free to inspect the install script yourself. An explanation of each depende
 
 4. From here on, you can either add the full path to the EAF installation directory to your Emacs ```load-path```, then add the following to `init.el`:
 
-```Elisp
-(add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
-(require 'eaf)
-```
+    ```Elisp
+    (add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
+    (require 'eaf)
+    ```
 Alternatively, if you use [use-package](https://github.com/jwiegley/use-package), you can use the following *sample* configuration for your convenience.
 
-```Elisp
-(use-package eaf
-  :load-path "~/.emacs.d/site-lisp/emacs-application-framework" ; Set to "/usr/share/emacs/site-lisp/eaf" if installed from AUR
-  :init
-  (use-package epc :defer t :ensure t)
-  (use-package ctable :defer t :ensure t)
-  (use-package deferred :defer t :ensure t)
-  (use-package s :defer t :ensure t)
-  :custom
-  (eaf-browser-continue-where-left-off t)
-  :config
-  (eaf-setq eaf-browser-enable-adblocker "true")
-  (eaf-bind-key scroll_up "C-n" eaf-pdf-viewer-keybinding)
-  (eaf-bind-key scroll_down "C-p" eaf-pdf-viewer-keybinding)
-  (eaf-bind-key take_photo "p" eaf-camera-keybinding)
-  (eaf-bind-key nil "M-q" eaf-browser-keybinding)) ;; unbind, see more in the Wiki
-```
+    ```Elisp
+    (use-package eaf
+      :load-path "~/.emacs.d/site-lisp/emacs-application-framework" ; Set to "/usr/share/emacs/site-lisp/eaf" if installed from AUR
+      :init
+      (use-package epc :defer t :ensure t)
+      (use-package ctable :defer t :ensure t)
+      (use-package deferred :defer t :ensure t)
+      (use-package s :defer t :ensure t)
+      :custom
+      (eaf-browser-continue-where-left-off t)
+      :config
+      (eaf-setq eaf-browser-enable-adblocker "true")
+      (eaf-bind-key scroll_up "C-n" eaf-pdf-viewer-keybinding)
+      (eaf-bind-key scroll_down "C-p" eaf-pdf-viewer-keybinding)
+      (eaf-bind-key take_photo "p" eaf-camera-keybinding)
+      (eaf-bind-key nil "M-q" eaf-browser-keybinding)) ;; unbind, see more in the Wiki
+    ```
 
 ### Dependency List
 
 Packages listed as **Core** are mandatory for EAF to work, whereas other packages are optional - install if you want to use corresponding EAF Application.
 
-| Package                        | Dependent                            | Description                                           |
-| :--------                      | :------                              | :------                                               |
-| python-epc                     | Core                                 | EPC for Python                                        |
-| python-pyqt5, python-pyqt5-sip | Core                                 | Essential GUI library                                 |
-| python-pyqtwebengine           | Core                                 | Chromium based web rendering engine                   |
-| wmctrl, xdotool                | Core                                 | Activate Emacs window input focus                     |
-| pygetwindow                    | Core                                 | Activate Emacs window input focus on WSL from Windows |
-| nodejs                         | Core                                 | Installs dependencies, and for app communications     |
-| mac-app-frontmost              | Core                                 | Monitor frontmost app on macOS                        |
-| python-pymupdf                 | PDF Viewer                           | PDF rendering engine                                  |
-| python-qrcode                  | File Sender, File Receiver, Airshare | Render QR code pointing to local files                |
-| aria2                          | Browser                              | Download files from the web                           |
-| libreoffice                    | Doc Viewer                           | Convert doc file to pdf                               |
-| filebrowser-bin                | File Browser                         | Share files between computer and smartphone           |
-| python-qtconsole               | Jupyter                              | Provide RichJupyterWidget                             |
-| python-retrying                | Markdown Previewer                   | Provide @retry                                        |
+| Package                        | Dependent                            | Description                                                        |
+| :--------                      | :------                              | :------                                                            |
+| python-epc                     | Core                                 | EPC for Python                                                     |
+| python-pyqt5, python-pyqt5-sip | Core                                 | Essential GUI library                                              |
+| python-pyqtwebengine           | Core                                 | Chromium based web rendering engine                                |
+| wmctrl                         | Core                                 | Activate Emacs window input focus                                  |
+| pygetwindow                    | Core                                 | Activate Emacs window input focus on WSL from Windows              |
+| nodejs                         | Core                                 | Installs dependencies, and for app communications                  |
+| mac-app-frontmost              | Core                                 | Monitor frontmost app on macOS                                     |
+| python-pymupdf                 | PDF Viewer                           | PDF rendering engine                                               |
+| python-qrcode                  | File Sender, File Receiver, Airshare | Render QR code pointing to local files                             |
+| aria2                          | Browser                              | Download files from the web                                        |
+| libreoffice                    | Doc Viewer                           | Convert doc file to pdf                                            |
+| filebrowser-bin                | File Browser                         | Share files between computer and smartphone                        |
+| python-qtconsole               | Jupyter                              | Provide RichJupyterWidget                                          |
+| python-retrying                | Markdown Previewer                   | Provide @retry                                                     |
+| python-pytaglib                | Music Player                         | Parse ID3 tag                                                      |
+| python-psutil                  | System Monitor                       | Retrieving information on running processes and system utilization |
 
 ## Launch EAF Applications
 | Application Name    | Launch                                                                 |
@@ -175,7 +193,8 @@ Packages listed as **Core** are mandatory for EAF to work, whereas other package
 | Mindmap             | `M-x eaf-create-mindmap` or `M-x eaf-open-mindmap`                     |
 | MS Office Viewer    | `M-x eaf-open-office`                                                  |
 | Jupyter             | `M-x eaf-open-jupyter`                                                 |
-| Music               | `M-x eaf-open-music`                                                   |
+| Music               | `M-x eaf-open-music-player`                                            |
+| System Monitor      | `M-x eaf-open-system-monitor`                                          |
 | Demo                | `M-x eaf-open-demo` to verify basic functionality                      |
 | Vue Demo            | `M-x eaf-open-vue-demo` to verify vue.js functionality                 |
 
@@ -215,6 +234,9 @@ Both projects are similar in terms of interface, but they are two completely dif
 ### macOS
 Currently, macOS is only partially supported and needs a lot of testing, not all functions can work normally, please check the [Wiki](https://github.com/manateelazycat/emacs-application-framework/wiki/macOS) for details.
 
+### Browser crashes
+Please DO NOT install PyQt5 through pip, pip version has bug, please install PyQt5 from the OS software repository.
+
 ### EAF js-video-player can't play some video on Windows and Mac. Why?
 `js-video-player` requires that qtwebengine built against ffmpeg to support proprietary codecs like `h264/aac`.
 
@@ -228,17 +250,17 @@ One workaround is to name of command `wmctrl -m` to the elisp list `eaf-wm-focus
 ### Proxy
 If you need to use proxy to access internet, one can configure the proxy settings.
 
-```Elisp
-(setq eaf-proxy-type "http")
-(setq eaf-proxy-host "127.0.0.1")
-(setq eaf-proxy-port "1080")
-```
+    ```Elisp
+    (setq eaf-proxy-type "http")
+    (setq eaf-proxy-host "127.0.0.1")
+    (setq eaf-proxy-port "1080")
+    ```
 
 If you use Socks5 as local proxy, one can set proxy type with:
 
-```Elisp
-(setq eaf-proxy-type "socks5")
-```
+    ```Elisp
+    (setq eaf-proxy-type "socks5")
+    ```
 
 ## EAF in the community
 

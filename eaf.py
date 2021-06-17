@@ -87,18 +87,44 @@ class EAF(object):
         eval_in_emacs('eaf--first-start', [self.server.server_address[1], self.webengine_include_private_codec()])
 
         # Set Network proxy.
-        if proxy_host != "" and proxy_port != "":
-            proxy_string = "{0}://{1}:{2}".format(proxy_type, proxy_host, proxy_port)
+        self.proxy = (proxy_type, proxy_host, proxy_port)
+        self.is_proxy = False
 
-            proxy = QNetworkProxy()
-            if proxy_type == "socks5":
-                proxy.setType(QNetworkProxy.Socks5Proxy)
-            elif proxy_type == "http":
-                proxy.setType(QNetworkProxy.HttpProxy)
+        if proxy_type != "" and proxy_host != "" and proxy_port != "":
+            self.enable_proxy()
 
-            proxy.setHostName(proxy_host)
-            proxy.setPort(int(proxy_port))
-            QNetworkProxy.setApplicationProxy(proxy)
+    def enable_proxy(self):
+        global proxy_string
+
+        proxy_string = "{0}://{1}:{2}".format(self.proxy[0], self.proxy[1], self.proxy[2])
+
+        proxy = QNetworkProxy()
+        if self.proxy[0] == "socks5":
+            proxy.setType(QNetworkProxy.Socks5Proxy)
+        elif self.proxy[0] == "http":
+            proxy.setType(QNetworkProxy.HttpProxy)
+        proxy.setHostName(self.proxy[1])
+        proxy.setPort(int(self.proxy[2]))
+
+        self.is_proxy = True
+        QNetworkProxy.setApplicationProxy(proxy)
+
+    def disable_proxy(self):
+        global proxy_string
+
+        proxy_string = ""
+
+        proxy = QNetworkProxy()
+        proxy.setType(QNetworkProxy.NoProxy)
+
+        self.is_proxy = False
+        QNetworkProxy.setApplicationProxy(proxy)
+
+    def toggle_proxy(self):
+        if self.is_proxy:
+            self.disable_proxy()
+        else:
+            self.enable_proxy()
 
     def build_emacs_server_connect(self, port):
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -114,7 +140,7 @@ class EAF(object):
 
     def webengine_include_private_codec(self):
         ''' Return bool of whether the QtWebEngineProcess include private codec. '''
-        if platform.system() == "Windows":
+        if platform.system() in ["Windows", "Darwin"]:
             return "False"
         path = os.path.join(QLibraryInfo.location(QLibraryInfo.LibraryExecutablesPath), "QtWebEngineProcess")
         return self.get_command_result("ldd {} | grep libavformat".format(path)) != ""
@@ -500,7 +526,7 @@ if __name__ == "__main__":
     hardware_acceleration_args = []
     if platform.system() != "Windows":
         hardware_acceleration_args += [
-            "--ignore-gpu-blacklist",
+            "--ignore-gpu-blocklist",
             "--enable-gpu-rasterization",
             "--enable-native-gpu-memory-buffers"]
 

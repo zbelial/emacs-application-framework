@@ -7,6 +7,8 @@
 # Emacs Application Framework
 Emacs Application Framework (EAF) 是新一代的Emacs图形应用框架，通过扩展Emacs的多媒体能力，最终达到 Live in Emacs 的终极目标。
 
+EAF可以在多个操作系统下工作，包括Linux、Windows和macOS。
+
 ## EAF 愿景
 Emacs距今已经有45年的发展历史，比现在人们用的操作系统都老。在这45年中，全世界最顶级的黑客在贡献自己的智慧和想象力，一起构建了Emacs这个伟大的开发者工具生态。
 
@@ -59,6 +61,11 @@ EAF是一个可编程扩展的框架，它自带一系列丰富的应用，你�
 | <img src="./screenshot/jupyter.png" width="400"> | <img src="./screenshot/eaf-interleave.gif" width="400"> |
 |                                                  |                                                         |
 
+| 音乐播放器                                            | 系统监视器                                                   |
+| :--------:                                            | :--------:                                              |
+| <img src="./screenshot/music_player.png" width="400"> | <img src="./screenshot/system_monitor.png" width="400"> |
+|                                                       |                                                         |
+
 ## EmacsConf2020 - Extend Emacs to Modern GUI Applications with EAF（暂无中文字幕）
 - 由[MatthewZMD](https://github.com/MatthewZMD)在EmacsConf2020的演讲和demo。
 - 官网（内附Q&A）: https://emacsconf.org/2020/talks/34/
@@ -68,36 +75,45 @@ EAF是一个可编程扩展的框架，它自带一系列丰富的应用，你�
 
 ## 安装
 1. 下载EAF:
-```Bash
-git clone --depth=1 -b master https://github.com/manateelazycat/emacs-application-framework.git ~/.emacs.d/site-lisp/emacs-application-framework/
-```
+
+    ```Bash
+    git clone --depth=1 -b master https://github.com/manateelazycat/emacs-application-framework.git ~/.emacs.d/site-lisp/emacs-application-framework/
+    ```
 
 你也可以通过[Quelpa](https://github.com/quelpa/quelpa)来下载
-```Emacs-lisp
-(quelpa '(eaf :fetcher github
-              :repo  "manateelazycat/emacs-application-framework"
-              :files ("*")))
-```
+
+    ```Emacs-lisp
+    (quelpa '(eaf :fetcher github
+                  :repo  "manateelazycat/emacs-application-framework"
+                  :files ("*")))
+    ```
 
 2. 通过`M-x eaf-install-dependencies`安装EAF依赖，
 
 如果你更喜欢手动执行安装脚本，
 
 - GNU/Linux用户：
-    - Arch系用户：[AUR](https://aur.archlinux.org/packages/emacs-application-framework-git/)
-    - 其他：
-      ```Bash
-      cd emacs-application-framework
-      chmod +x ./install-eaf.sh
-      ./install-eaf.sh
-      ```
+
+    ```Bash
+    cd emacs-application-framework
+    chmod +x ./install-eaf.sh
+    ./install-eaf.sh
+    ```
 
 - Windows用户：
 
-```shell
-cd emacs-application-framework
-node ./install-eaf-win32.js
-```
+    ```Bash
+    cd emacs-application-framework
+    node ./install-eaf-win32.js
+    ```
+
+- Mac用户:
+
+    ```Bash
+    cd emacs-application-framework
+    chmod +x ./install-eaf-mac.sh
+    ./install-eaf-mac.sh
+    ```
 
 脚本里安装的每一个依赖的解释可以在[依赖列表](#依赖列表)找到。
 
@@ -109,30 +125,30 @@ node ./install-eaf-win32.js
 
 4. 从这里开始，你可以把EAF加入Emacs的 ```load-path```，然后在 `init.el` 中写入:
 
-```Elisp
-(add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
-(require 'eaf)
-```
+    ```Elisp
+    (add-to-list 'load-path "~/.emacs.d/site-lisp/emacs-application-framework/")
+    (require 'eaf)
+    ```
 
 或者，如果你使用[use-package](https://github.com/jwiegley/use-package)，下面有一个简单的配置文件供你参考:
 
-```Elisp
-(use-package eaf
-  :load-path "~/.emacs.d/site-lisp/emacs-application-framework" ; Set to "/usr/share/emacs/site-lisp/eaf" if installed from AUR
-  :init
-  (use-package epc :defer t :ensure t)
-  (use-package ctable :defer t :ensure t)
-  (use-package deferred :defer t :ensure t)
-  (use-package s :defer t :ensure t)
-  :custom
-  (eaf-browser-continue-where-left-off t)
-  :config
-  (eaf-setq eaf-browser-enable-adblocker "true")
-  (eaf-bind-key scroll_up "C-n" eaf-pdf-viewer-keybinding)
-  (eaf-bind-key scroll_down "C-p" eaf-pdf-viewer-keybinding)
-  (eaf-bind-key take_photo "p" eaf-camera-keybinding)
-  (eaf-bind-key nil "M-q" eaf-browser-keybinding)) ;; unbind, see more in the Wiki
-```
+    ```Elisp
+    (use-package eaf
+      :load-path "~/.emacs.d/site-lisp/emacs-application-framework" ; Set to "/usr/share/emacs/site-lisp/eaf" if installed from AUR
+      :init
+      (use-package epc :defer t :ensure t)
+      (use-package ctable :defer t :ensure t)
+      (use-package deferred :defer t :ensure t)
+      (use-package s :defer t :ensure t)
+      :custom
+      (eaf-browser-continue-where-left-off t)
+      :config
+      (eaf-setq eaf-browser-enable-adblocker "true")
+      (eaf-bind-key scroll_up "C-n" eaf-pdf-viewer-keybinding)
+      (eaf-bind-key scroll_down "C-p" eaf-pdf-viewer-keybinding)
+      (eaf-bind-key take_photo "p" eaf-camera-keybinding)
+      (eaf-bind-key nil "M-q" eaf-browser-keybinding)) ;; unbind, see more in the Wiki
+    ```
 
 ### 依赖列表
 **核心** 分类代表必备依赖，这些包必须安装好EAF才能工作。其余依赖都可选，若想其使用对应的应用时，你才需要安装这些依赖。当然我们推荐先把所有依赖都安装好，等到真正使用的时候就不用再次折腾。
@@ -142,7 +158,7 @@ node ./install-eaf-win32.js
 | python-epc                     | 核心                         | EPC Python端                             |
 | python-pyqt5, python-pyqt5-sip | 核心                         | GUI图形库                                |
 | python-pyqtwebengine           | 核心                         | 基于Chromium的浏览器引擎                 |
-| wmctrl, xdotool                | 核心                         | 激活Emacs窗口输入焦点                    |
+| wmctrl                         | 核心                         | 激活Emacs窗口输入焦点                    |
 | pygetwindow                    | 核心                         | 从Windows中eaf激活WSL中Emacs窗口输入焦点 |
 | nodejs                         | 核心                         | 下载依赖与应用交互                       |
 | mac-app-frontmost              | 核心                         | 获取macOS当前app名称                     |
@@ -153,6 +169,8 @@ node ./install-eaf-win32.js
 | filebrowser-bin                | 文件浏览器                   | 在电脑和手机之间快速共享文件             |
 | python-qtconsole               | jupyter                      | 提供RichJupyterWidget                    |
 | python-retrying                | Markdown浏览器               | 提供@retry                               |
+| python-pytaglib                | 音乐播放器                   | 提取音乐ID3信息                          |
+| python-psutil                  | 系统监视器                   | 获取系统进程信息                   |
 
 ## EAF应用启动命令
 | 应用名称         | 启动命令                                                                    |
@@ -173,9 +191,10 @@ node ./install-eaf-win32.js
 | 思维导图         | `M-x eaf-create-mindmap` or `M-x eaf-open-mindmap`                          |
 | 微软Office阅读器 | `M-x eaf-open-office`                                                       |
 | jupyter          | `M-x eaf-open-jupyter`                                                      |
-| 音乐          | `M-x eaf-open-music`                                                      |
+| 音乐             | `M-x eaf-open-music-player`                                                 |
+| 系统监视器       | `M-x eaf-open-system-monitor`                                        |
 | 演示程序         | `M-x eaf-open-demo`                                                         |
-| Vue.js演示程序         | `M-x eaf-open-vue-demo`                                                         |
+| Vue.js演示程序   | `M-x eaf-open-vue-demo`                                                     |
 
 - EAF浏览器以及PDF浏览器支持Emacs内置书签操作，通过使用`M-x bookmark-set`（默认`C-x r m`）以及`M-x bookmark-bmenu-list`（默认`C-x r l`）。
 
@@ -213,6 +232,9 @@ EAF主要实现这几个功能：
 ### macOS
 EAF当前只能部分支持macOS，不是所有功能都可以正常工作，具体的情况请查看[Wiki](https://github.com/manateelazycat/emacs-application-framework/wiki/macOS)。
 
+### 浏览器崩溃
+请不要用pip安装PyQt5, pip的版本有bug，请从操作系统软件仓库安装PyQt5。
+
 ### 为什么EAF的js-video-player在Windows和Mac下无法播放视频文件？
 `js-video-player`需要qtwebengine编译时链接到ffmpeg，才能支持额外的编码如`h264/aac`.
 
@@ -226,17 +248,17 @@ EAF确认可以工作的桌面环境或者窗口管理器包括：KDE、Gnome2�
 ### 代理
 可以通过下面设置来通过代理访问互联网：
 
-```Elisp
-(setq eaf-proxy-type "http")
-(setq eaf-proxy-host "127.0.0.1")
-(setq eaf-proxy-port "1080")
-```
+    ```Elisp
+    (setq eaf-proxy-type "http")
+    (setq eaf-proxy-host "127.0.0.1")
+    (setq eaf-proxy-port "1080")
+    ```
 
 如果你使用Socks5代理，你可以设置代理类型为：
 
-```Elisp
-(setq eaf-proxy-type "socks5")
-```
+    ```Elisp
+    (setq eaf-proxy-type "socks5")
+    ```
 
 ## EAF社区
 

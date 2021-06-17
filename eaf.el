@@ -7,7 +7,7 @@
 ;; Copyright (C) 2018, Andy Stewart, all rights reserved.
 ;; Created: 2018-06-15 14:10:12
 ;; Version: 0.5
-;; Last-Updated: Fri Mar 19 19:49:34 2021 (-0400)
+;; Last-Updated: Sat Jun 12 21:45:41 2021 (-0400)
 ;;           By: Mingde (Matthew) Zeng
 ;; URL: https://github.com/manateelazycat/emacs-application-framework
 ;; Keywords:
@@ -72,6 +72,7 @@
 ;;
 
 ;;; Code:
+(require 'cl-lib)
 
 (defun add-subdirs-to-load-path (dir)
   "Recursive add directory DIR to `load-path'."
@@ -83,16 +84,17 @@
 
 ;;;###autoload
 (defun eaf-install-dependencies ()
-  "An interactive function that run install-eaf.sh or install-eaf-win32.js for Linux or Windows respectively."
+  "An interactive function that run install-eaf.sh or install-eaf-win32.js or install-eaf-mac.sh for Linux or Windows or macOS respectively."
   (interactive)
-  (let ((eaf-dir (file-name-directory (locate-library "eaf"))))
+  (let* ((eaf-dir (file-name-directory (locate-library "eaf")))
+         (default-directory eaf-dir))
     (cond ((eq system-type 'gnu/linux)
-           (let ((default-directory "/sudo::"))
-             (shell-command (concat eaf-dir "install-eaf.sh" "&"))))
+           (shell-command (concat "./install-eaf.sh" "&")))
           ((memq system-type '(cygwin windows-nt ms-dos))
-           (shell-command (format "node %s" (concat eaf-dir "install-eaf-win32.js" "&"))))
+           (shell-command (format "node %s" (concat "install-eaf-win32.js" "&"))))
           ((eq system-type 'darwin)
-           (user-error "Unfortunately macOS is not supported, see README for details")))))
+           (shell-command (concat "./install-eaf-mac.sh" "&"))))))
+
 
 (require 'bookmark)
 (require 'cl-lib)
@@ -215,7 +217,7 @@ been initialized."
   (let*
       ((connect-function connect-function)
        (name (format "EPC Server %s" (epc:uid)))
-       (buf (epc:make-procbuf (format "*%s*" name)))
+       (buf (epc:make-procbuf (format " *%s*" name)))
        (main-process
         (make-network-process
          :name name
@@ -238,7 +240,7 @@ been initialized."
           epcs:server-processes)
     main-process))
 
-(defvar eaf-server
+(defun eaf--start-epc-server ()
   (let (server)
     (setq server (epcs:server-start
                   (lambda (mngr)
@@ -257,14 +259,15 @@ been initialized."
                   ))
     (if server
         (setq eaf-server-port (process-contact server :service))
-      (message "eaf-server fails to start.")
+      (error "eaf-server fails to start.")
       )
-    server))
+    server)
+  )
 
 (when noninteractive
   ;; Start "event loop".
-  (loop repeat 600
-        do (sleep-for 0.1)))
+  (cl-loop repeat 600
+           do (sleep-for 0.1)))
 
 (defvar eaf-epc-process nil)
 
@@ -313,7 +316,7 @@ Each element has the form (NAME . URL).
 It must defined at `eaf-browser-search-engines'."
   :type 'string)
 
-(defcustom eaf-python-command (if (memq system-type '(cygwin windows-nt ms-dos)) "python3.exe" "python3")
+(defcustom eaf-python-command (if (memq system-type '(cygwin windows-nt ms-dos)) "python.exe" "python3")
   "The Python interpreter used to run eaf.py."
   :type 'string)
 
@@ -339,6 +342,7 @@ It must defined at `eaf-browser-search-engines'."
     (eaf-browser-download-path . "~/Downloads")
     (eaf-browser-aria2-proxy-host . "")
     (eaf-browser-aria2-proxy-port . "")
+    (eaf-browser-aria2-auto-file-renaming . "false")
     (eaf-browser-dark-mode . "follow")
     (eaf-browser-pc-user-agent . "Mozilla/5.0 (X11; Linux x86_64; rv:85.0) Gecko/20100101 Firefox/85.0")
     (eaf-browser-phone-user-agent . "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A5370a Safari/604.1")
@@ -349,6 +353,7 @@ It must defined at `eaf-browser-search-engines'."
     (eaf-pdf-default-zoom . "1.0")
     (eaf-pdf-dark-exclude-image . "true")
     (eaf-pdf-scroll-ratio . "0.05")
+    (eaf-pdf-enable-trim-white-margin . "false")
     (eaf-terminal-dark-mode . "follow")
     (eaf-terminal-font-size . "13")
     (eaf-terminal-font-family . "")
@@ -552,7 +557,8 @@ Try not to modify this alist directly.  Use `eaf-setq' to modify instead."
     ("M-p" . "toggle_presentation_mode")
     ("J" . "select_left_tab")
     ("K" . "select_right_tab")
-    ("o" . "eaf-pdf-outline"))
+    ("o" . "eaf-pdf-outline")
+    ("T" . "toggle_trim_white_margin"))
   "The keybinding of EAF PDF Viewer."
   :type 'cons)
 
@@ -569,6 +575,7 @@ Try not to modify this alist directly.  Use `eaf-setq' to modify instead."
     ("M-g" . "exit_fullscreen")
     ("<f12>" . "open_devtools")
     ("h" . "backward")
+    ("f" . "toggle_fullscreen")
     ("l" . "forward")
     ("r" . "restart")
     ("j" . "decrease_volume")
@@ -605,12 +612,6 @@ Try not to modify this alist directly.  Use `eaf-setq' to modify instead."
     ("<f12>" . "open_devtools")
     )
   "The keybinding of EAF Image Viewer."
-  :type 'cons)
-
-(defcustom eaf-music-keybinding
-  '(("<f12>" . "open_devtools")
-    )
-  "The keybinding of EAF Music."
   :type 'cons)
 
 (defcustom eaf-terminal-keybinding
@@ -743,10 +744,44 @@ Try not to modify this alist directly.  Use `eaf-setq' to modify instead."
   "The keybinding of EAF Jupyter."
   :type 'cons)
 
+(defcustom eaf-music-player-keybinding
+  '(("<f12>" . "open_devtools")
+    ("j" . "play_next")
+    ("k" . "play_prev")
+    ("," . "backward")
+    ("." . "forward")
+    ("SPC" . "toggle")
+    ("C-n" . "scroll_up")
+    ("C-p" . "scroll_down")
+    ("C-v" . "scroll_up_page")
+    ("M-v" . "scroll_down_page")
+    ("M-<" . "scroll_to_begin")
+    ("M->" . "scroll_to_bottom")
+    ("g" . "jump_to_file")
+    )
+  "The keybinding of EAF Music Player."
+  :type 'cons)
+
+(defcustom eaf-system-monitor-keybinding
+  '(("<f12>" . "open_devtools")
+    ("C-n" . "scroll_up")
+    ("C-p" . "scroll_down")
+    ("C-v" . "scroll_up_page")
+    ("M-v" . "scroll_down_page")
+    ("M-<" . "scroll_to_begin")
+    ("M->" . "scroll_to_bottom")
+    )
+  "The keybinding of EAF System Monitor."
+  :type 'cons)
+
 (defcustom eaf-pdf-extension-list
   '("pdf" "xps" "oxps" "cbz" "epub" "fb2" "fbz")
   "The extension list of pdf application."
   :type 'cons)
+
+(defcustom eaf-pdf-store-history t
+  "If it is t, the pdf file path will be stored in eaf-config-location/pdf/history/log.txt for eaf-open-pdf-from-history to use"
+  :type 'boolean)
 
 (defcustom eaf-markdown-extension-list
   '("md")
@@ -761,11 +796,6 @@ Try not to modify this alist directly.  Use `eaf-setq' to modify instead."
 (defcustom eaf-video-extension-list
   '("avi" "webm" "rmvb" "ogg" "mp4" "mkv" "m4v")
   "The extension list of video player application."
-  :type 'cons)
-
-(defcustom eaf-music-extension-list
-  '("mp3")
-  "The extension list of music player application."
   :type 'cons)
 
 (defcustom eaf-browser-extension-list
@@ -806,6 +836,10 @@ If non-nil, all active EAF Browser buffers will be saved before Emacs is killed,
 and will re-open them when calling `eaf-browser-restore-buffers' in the future session."
   :type 'boolean)
 
+(defcustom eaf-browser-fullscreen-move-cursor-corner nil
+  "If non-nil, move the mouse cursor to the corner when fullscreen in the browser."
+  :type 'boolean)
+
 (defcustom eaf-proxy-host ""
   "Proxy Host used by EAF Browser."
   :type 'string)
@@ -835,12 +869,20 @@ Then EAF will start by gdb, please send new issue with `*eaf*' buffer content wh
 (defcustom eaf-wm-focus-fix-wms
   `(
     "i3"                                ;i3
-    "LG3D"                              ;qtile
-    "Xpra"
-    "EXWM"
+    "LG3D"                              ;QTile
+    "Xpra"                              ;Windows WSL
+    "EXWM"                              ;EXWM
+    "Xfwm4"                             ;Xfce4
     )
   "Set mouse cursor to frame bottom in these wms, to make EAF receive input event.
-Add NAME of command `wmctrl -m' to this list."
+
+EAF confirms that the desktop environment or window manager you can work includes:
+KDE, Gnome2, Gnome3, Mate, Xfce, LXDE, Sway, i3, QTile, Xpra, EXWM.
+
+If your window manager can't receive input event, you can try add `NAME' of command `wmctrl -m' to this list.
+
+Please send PR if it works.
+Please fill an issue if it still doesn't work."
   :type 'list)
 
 (defvar eaf-app-binding-alist
@@ -849,7 +891,8 @@ Add NAME of command `wmctrl -m' to this list."
     ("video-player" . eaf-video-player-keybinding)
     ("js-video-player" . eaf-js-video-player-keybinding)
     ("image-viewer" . eaf-image-viewer-keybinding)
-    ("music" . eaf-music-keybinding)
+    ("music-player" . eaf-music-player-keybinding)
+    ("system-monitor" . eaf-system-monitor-keybinding)
     ("camera" . eaf-camera-keybinding)
     ("terminal" . eaf-terminal-keybinding)
     ("markdown-previewer" . eaf-browser-keybinding)
@@ -887,7 +930,6 @@ A bookmark handler function is used as
     ("markdown-previewer" . eaf-markdown-extension-list)
     ("image-viewer" . eaf-image-extension-list)
     ("video-player" . eaf-video-extension-list)
-    ("music" . eaf-music-extension-list)
     ("browser" . eaf-browser-extension-list)
     ("org-previewer" . eaf-org-extension-list)
     ("mindmap" . eaf-mindmap-extension-list)
@@ -1141,6 +1183,8 @@ A hashtable, key is url and value is title.")
     (user-error "[EAF] Please initiate EAF with eaf-open-... functions only"))
    ((epc:live-p eaf-epc-process)
     (user-error "[EAF] Process is already running")))
+  ;; start epc server and set `eaf-server-port'
+  (eaf--start-epc-server)
   (let* ((eaf-args (append
                     (list eaf-python-file)
                     (eaf-get-render-size)
@@ -1267,11 +1311,7 @@ We need calcuate render allocation to make sure no black border around render co
          (y (+ (nth 1 window-edges)
                (if (version< emacs-version "27.0")
                    (window-header-line-height window)
-                 (window-tab-line-height window))
-               (if (and (require 'tab-line nil t)
-                        tab-line-mode) ; Support Emacs 27 tab-line-mode
-                   (window-tab-line-height window)
-                 0)))
+                 (window-tab-line-height window))))
          (w (- (nth 2 window-edges) x))
          (h (- (nth 3 window-edges) (window-mode-line-height window) y)))
     (list x y w h)))
@@ -1437,46 +1477,47 @@ Including title-bar, menu-bar, offset depends on window system, and border."
       (+ (eaf--frame-top frame) (eaf--frame-internal-height frame))
     0))
 
-(when (eq system-type 'darwin)
-  (defun eaf--mac-focus-change ()
-    "Manage Emacs's focus change"
-    (cond
-     ((string= "Python\n" (shell-command-to-string "app-frontmost --name"))
-      (setq eaf--mac-switch-to-python t))
-
-     ((string= "Emacs\n" (shell-command-to-string "app-frontmost --name"))
+(eval-when-compile
+  (when (eq system-type 'darwin)
+    (defun eaf--mac-focus-change ()
+      "Manage Emacs's focus change"
       (cond
-       (eaf--mac-switch-to-python
-        (setq eaf--mac-switch-to-python nil))
-       ((not eaf--mac-has-focus)
-        (run-with-timer 0.1 nil #'eaf--mac-focus-in)
-        )
-       (eaf--mac-has-focus
-        (eaf--mac-focus-out))))
-     (t (eaf--mac-focus-out))))
+       ((string= "Python\n" (shell-command-to-string "app-frontmost --name"))
+        (setq eaf--mac-switch-to-python t))
 
-  (defun eaf--mac-replace-eaf-buffers ()
-    (dolist (window (window-list))
-      (select-window window)
-      (when (eq major-mode 'eaf-mode)
-        (get-buffer-create "*eaf temp*")
-        (switch-to-buffer "*eaf temp*" t))))
+       ((string= "Emacs\n" (shell-command-to-string "app-frontmost --name"))
+        (cond
+         (eaf--mac-switch-to-python
+          (setq eaf--mac-switch-to-python nil))
+         ((not eaf--mac-has-focus)
+          (run-with-timer 0.1 nil #'eaf--mac-focus-in)
+          )
+         (eaf--mac-has-focus
+          (eaf--mac-focus-out))))
+       (t (eaf--mac-focus-out))))
 
-  (defun eaf--mac-focus-in ()
-    (setq eaf--mac-has-focus t)
-    (ignore-errors
-      (set-window-configuration (frame-parameter (selected-frame) 'eaf--mac-frame))
-      (bury-buffer "*eaf temp*"))
-    )
+    (defun eaf--mac-replace-eaf-buffers ()
+      (dolist (window (window-list))
+        (select-window window)
+        (when (eq major-mode 'eaf-mode)
+          (get-buffer-create "*eaf temp*")
+          (switch-to-buffer "*eaf temp*" t))))
 
-  (defun eaf--mac-focus-out (&optional frame)
-    (setq eaf--mac-has-focus nil)
-    (set-frame-parameter (or frame (selected-frame)) 'eaf--mac-frame (current-window-configuration))
-    (eaf--mac-replace-eaf-buffers))
+    (defun eaf--mac-focus-in ()
+      (setq eaf--mac-has-focus t)
+      (ignore-errors
+        (set-window-configuration (frame-parameter (selected-frame) 'eaf--mac-frame))
+        (bury-buffer "*eaf temp*")))
 
-  (add-function :after after-focus-change-function #'eaf--mac-focus-change)
-  (add-to-list 'delete-frame-functions #'eaf--mac-focus-out)
-  )
+    (defun eaf--mac-focus-out (&optional frame)
+      (when eaf--mac-has-focus
+        (setq eaf--mac-has-focus nil)
+        (set-frame-parameter (or frame (selected-frame)) 'eaf--mac-frame (current-window-configuration))
+        (eaf--mac-replace-eaf-buffers)))
+
+    (add-function :after after-focus-change-function #'eaf--mac-focus-change)
+    (add-to-list 'delete-frame-functions #'eaf--mac-focus-out)
+    ))
 
 (defun eaf-monitor-configuration-change (&rest _)
   "EAF function to respond when detecting a window configuration change."
@@ -1825,6 +1866,7 @@ WEBENGINE-INCLUDE-PRIVATE-CODEC is only useful when app-name is video-player."
 (defun eaf--update-modeline-icon ()
   "Update modeline icon if used"
   (when (and (ignore-errors (require 'all-the-icons) (featurep 'eaf-all-the-icons)))
+    (declare-function eaf-all-the-icons-update-icon "eaf-all-the-icons.el")
     (eaf-all-the-icons-update-icon)))
 
 (defun eaf--markdown-preview-display (buf)
@@ -1938,6 +1980,11 @@ In that way the corresponding function will be called to retrieve the HTML
   (interactive)
   (eaf-open-browser (browse-url-url-at-point)))
 
+(defun eaf-toggle-proxy()
+  "Toggle proxy to none or default proxy."
+  (interactive)
+  (eaf-call-sync "toggle_proxy"))
+
 (defun eaf-browser--duplicate-page-in-new-tab (url)
   "Duplicate a new tab for the dedicated URL."
   (eaf-open (eaf-wrap-url url) "browser" nil t))
@@ -2037,7 +2084,9 @@ choose a search engine defined in `eaf-browser-search-engines'"
                    (error (format "[EAF/browser] Search engine %s is unknown to EAF!" real-search-engine))))
          (current-symbol (if mark-active
                              (if (eq major-mode 'pdf-view-mode)
-                                 (car (pdf-view-active-region-text))
+                                 (progn
+                                   (declare-function pdf-view-active-region-text "pdf-view.el")
+                                   (car (pdf-view-active-region-text)))
                                (buffer-substring (region-beginning) (region-end)))
                            (symbol-at-point)))
          (search-url (if search-string
@@ -2059,10 +2108,15 @@ choose a search engine defined in `eaf-browser-search-engines'"
   (interactive)
   (eaf-open "eaf-vue-demo" "vue-demo"))
 
-(defun eaf-open-music (file)
+(defun eaf-open-music-player (music-file)
   "Open EAF music player."
-  (interactive "F[EAF] Play Music: ")
-  (eaf-open file "music"))
+  (interactive "fOpen music: ")
+  (eaf-open "eaf-music-player" "music-player" music-file))
+
+(defun eaf-open-system-monitor ()
+  "Open EAF system monitor."
+  (interactive)
+  (eaf-open "eaf-system-monitor" "system-monitor"))
 
 ;;;###autoload
 (defun eaf-open-camera ()
@@ -2163,6 +2217,51 @@ If ALWAYS-NEW is non-nil, always open a new terminal for the dedicated DIR."
   "Translate from a WSL path to a Windows path'"
   (replace-regexp-in-string "/mnt/\\([a-zA-Z]\\)" "\\1:" path))
 
+(defun eaf-store-pdf-history (url)
+  "A wrapper around `eaf-open' that store pdf history candidates."
+  (let* (found-history-result (pdf-history-file-path
+                               (concat eaf-config-location
+                                       (file-name-as-directory "pdf")
+                                       (file-name-as-directory "history")
+                                       "log.txt")))
+    (if (not (file-exists-p pdf-history-file-path))
+        (progn
+          ;; If it does not exist, create a folder to store the log and create a log file
+          (make-directory (file-name-directory pdf-history-file-path) t)
+          (with-temp-file pdf-history-file-path "")))
+    (find-file pdf-history-file-path)
+    (goto-char (point-min))
+    (if (search-forward url nil t) ;; search with no error
+        (kill-whole-line))  ;; Delete this record
+    (goto-char (point-min))
+    (insert (concat url "\n"))
+    (basic-save-buffer)
+    (kill-current-buffer)))
+
+(defun eaf-open-pdf-from-history ()
+  "A wrapper around `eaf-open' that provides pdf history candidates.
+This function works best if paired with a fuzzy search package."
+  (interactive)
+  (let* ((pdf-history-file-path
+          (concat eaf-config-location
+                  (file-name-as-directory "pdf")
+                  (file-name-as-directory "history")
+                  "log.txt"))
+         (history-pattern "^\\(.+\\)\\.pdf$")
+         (history-file-exists (file-exists-p pdf-history-file-path))
+         (history-pdf (completing-read
+                   "[EAF/pdf] Search || History: "
+                   (if history-file-exists
+                       (mapcar
+                        (lambda (h) (when (string-match history-pattern h)
+                                 (if (file-exists-p h)
+                                     (format "%s" h))))
+                        (with-temp-buffer (insert-file-contents pdf-history-file-path)
+                                          (split-string (buffer-string) "\n" t)))
+                     (make-directory (file-name-directory pdf-history-file-path) t)
+                     (with-temp-file pdf-history-file-path "")))))
+    (if history-pdf (eaf-open history-pdf))))
+
 ;;;###autoload
 (defun eaf-open (url &optional app-name args always-new)
   "Open an EAF application with URL, optional APP-NAME and ARGS.
@@ -2177,6 +2276,8 @@ When called interactively, URL accepts a file that can be opened by EAF."
   (interactive "F[EAF] EAF Open: ")
   ;; Try to set app-name along with url when calling INTERACTIVELY
   (when (and (not app-name) (file-exists-p url))
+    (when (and eaf-pdf-store-history (string-match "^\\(.+\\)\\.pdf$" url))
+      (eaf-store-pdf-history url))
     (setq url (expand-file-name url))
     (when (featurep 'recentf)
       (recentf-add-file url))
@@ -2313,7 +2414,7 @@ Make sure that your smartphone is connected to the same WiFi network as this com
         (t
          (eaf-call-async "update_focus_text"
                          eaf--buffer-id
-                         (eaf--encode-string (buffer-string)))))
+                         (eaf--encode-string (kill-new (buffer-string))))))
   (kill-buffer)
   (delete-window))
 
@@ -2326,7 +2427,7 @@ Make sure that your smartphone is connected to the same WiFi network as this com
     (set (make-local-variable 'eaf--buffer-app-name) buffer-app-name)
     (set (make-local-variable 'eaf--buffer-id) buffer-id)
     (outline-show-all)
-    (beginning-of-buffer)
+    (goto-char (point-min))
     (local-set-key (kbd "C-c C-c") 'eaf-edit-buffer-confirm)
     (local-set-key (kbd "C-c C-k") 'eaf-edit-buffer-cancel)
     (eaf--edit-set-header-line)))
@@ -2357,7 +2458,7 @@ Make sure that your smartphone is connected to the same WiFi network as this com
            :name ""
            :buffer " *eaf-open-office*"
            :command (list "libreoffice" "--headless" "--convert-to" "pdf" (file-truename file) "--outdir" "/tmp")
-           :sentinel (lambda (process event)
+           :sentinel (lambda (_ event)
                        (when (string= (substring event 0 -1) "finished")
                          (rename-file convert-file pdf-file)
                          (eaf-open pdf-file "pdf-viewer" (concat file-name-base "_office-pdf")))))))
@@ -2396,7 +2497,11 @@ Make sure that your smartphone is connected to the same WiFi network as this com
 (defun eaf--enter-fullscreen-request ()
   "Entering EAF browser fullscreen use Emacs frame's size."
   (setq-local eaf-fullscreen-p t)
-  (eaf-monitor-configuration-change))
+  (eaf-monitor-configuration-change)
+  (when (and eaf-browser-fullscreen-move-cursor-corner
+             (or (string= eaf--buffer-app-name "browser")
+                 (string= eaf--buffer-app-name "js-video-player")))
+    (eaf-call-async "execute_function" eaf--buffer-id "move_cursor_to_corner" (key-description (this-command-keys-vector)))))
 
 (defun eaf--exit_fullscreen_request ()
   "Exit EAF browser fullscreen."
@@ -2410,6 +2515,12 @@ Otherwise send key 'esc' to browser."
   (if eaf-fullscreen-p
       (eaf-call-async "execute_function" eaf--buffer-id "exit_fullscreen" "<escape>")
     (eaf-call-async "send_key" eaf--buffer-id "<escape>")))
+
+(defun eaf-browser-is-loading ()
+  "Return non-nil if current page is loading."
+  (interactive)
+  (when (and (string= eaf--buffer-app-name "browser")
+             (string= (eaf-call-sync "call_function" eaf--buffer-id "page_is_loading") "True"))))
 
 ;; Update and load the theme
 (defun eaf-get-theme-mode ()
@@ -2519,16 +2630,14 @@ The key is the annot id on PAGE."
   "Activate Emacs window running on Wsl."
   (eaf-call-async "activate_emacs_wsl_window" (frame-parameter nil 'name)))
 
-(defun eaf--activate-emacs-linux-window ()
+(defun eaf--activate-emacs-linux-window (&optional buffer_id)
   "Activate Emacs window by `wmctrl'."
   (if (member (eaf--get-current-desktop-name) eaf-wm-focus-fix-wms)
       ;; When switch app focus in WM, such as, i3 or qtile.
       ;; Emacs window cannot get the focus normally if mouse in EAF buffer area.
       ;;
       ;; So we move mouse to frame bottom of Emacs, to make EAF receive input event.
-      (if (executable-find "xdotool")
-          (shell-command-to-string (format "xdotool mousemove %d %d" (car (frame-edges)) (nth 3 (frame-edges))))
-        (message "Please install xdotool to make mouse to frame bottom automatically."))
+      (eaf-call-async "execute_function" (or eaf--buffer-id buffer_id) "move_cursor_to_corner" (key-description (this-command-keys-vector)))
 
     ;; When press Alt + Tab in DE, such as KDE.
     ;; Emacs window cannot get the focus normally if mouse in EAF buffer area.
@@ -2542,7 +2651,7 @@ The key is the annot id on PAGE."
   "Activate Emacs macOS window."
   (shell-command-to-string "open -a emacs"))
 
-(defun eaf-activate-emacs-window()
+(defun eaf-activate-emacs-window(&optional buffer_id)
   "Activate Emacs window."
   (cond
    ((eaf--called-from-wsl-on-windows-p)
@@ -2552,7 +2661,7 @@ The key is the annot id on PAGE."
    ((eq system-type 'darwin)
     (eaf--activate-emacs-mac-window))
    ((eq system-type 'gnu/linux)
-    (eaf--activate-emacs-linux-window))))
+    (eaf--activate-emacs-linux-window buffer_id))))
 
 (defun eaf-elfeed-open-url ()
   "Display the currently selected item in an eaf buffer."
@@ -2586,7 +2695,7 @@ The key is the annot id on PAGE."
 (defun eaf--select-window-by-direction (direction)
   "Select the most on the side according to the direction."
   (ignore-errors
-    (dotimes (i 50)
+    (dotimes (_ 50)
       (pcase direction
         ("left" (windmove-left))
         ("right" (windmove-right))
@@ -2617,7 +2726,8 @@ The key is the annot id on PAGE."
                     'eaf-video-player-keybinding
                     'eaf-js-video-player-keybinding
                     'eaf-image-viewer-keybinding
-                    'eaf-music-keybinding
+                    'eaf-music-player-keybinding
+                    'eaf-system-monitor-keybinding
                     'eaf-terminal-keybinding
                     'eaf-camera-keybinding
                     'eaf-mindmap-keybinding
@@ -2673,7 +2783,7 @@ The key is the annot id on PAGE."
       (read-only-mode -1)
       (erase-buffer)
       (insert html-text)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (read-only-mode 1))
     (switch-to-buffer eaf-export-text-buffer)
     ))
@@ -2734,7 +2844,6 @@ The key is the annot id on PAGE."
                                  eaf-markdown-extension-list
                                  eaf-image-extension-list
                                  eaf-video-extension-list
-                                 eaf-music-extension-list
                                  eaf-org-extension-list
                                  eaf-mindmap-extension-list
                                  eaf-office-extension-list)))))
@@ -2754,7 +2863,6 @@ You can configure a blacklist using `eaf-find-file-ext-blacklist'"
        (member (downcase ext) (append
                                eaf-pdf-extension-list
                                eaf-video-extension-list
-                               eaf-music-extension-list
                                eaf-image-extension-list
                                eaf-mindmap-extension-list))
        (not (member ext eaf-find-file-ext-blacklist))))

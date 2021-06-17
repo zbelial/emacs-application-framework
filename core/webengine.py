@@ -21,10 +21,11 @@
 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QUrl, Qt, QEvent, QEventLoop, QVariant, QTimer, QFile
-from PyQt5.QtGui import QColor, QCursor, QScreen
+from PyQt5.QtGui import QColor, QScreen
 from PyQt5.QtNetwork import QNetworkCookie
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineScript, QWebEngineProfile, QWebEngineSettings
-from PyQt5.QtWidgets import QApplication, QWidget, qApp
+from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWebChannel import QWebChannel
 from core.buffer import Buffer
 from core.utils import touch, string_to_base64, popen_and_call, call_and_check_code, interactive, abstract, eval_in_emacs, message_to_emacs, open_url_in_background_tab, duplicate_page_in_new_tab, open_url_in_new_tab, focus_emacs_buffer, atomic_edit
 from functools import partial
@@ -539,7 +540,7 @@ class BrowserView(QWebEngineView):
     @interactive(insert_or_do=True)
     def enable_dark_mode(self):
         ''' Dark mode support.'''
-        self.eval_js("""DarkReader.enable({brightness: 100, contrast: 90, sepia: 10});""")
+        self.eval_js("""DarkReader.setFetchMethod(window.fetch); DarkReader.enable({brightness: 100, contrast: 90, sepia: 10});""")
 
     @interactive(insert_or_do=True)
     def disable_dark_mode(self):
@@ -626,15 +627,9 @@ class BrowserBuffer(Buffer):
         self.caret_browsing_exit_flag = True
         self.caret_browsing_mark_activated = False
         self.caret_browsing_search_text = ""
-        self.progressbar_color = QColor(self.emacs_var_dict["eaf-emacs-theme-foreground-color"])
-        self.progressbar_height = 2
         self.light_mode_mask_color = QColor("#FFFFFF")
         self.dark_mode_mask_color = QColor("#242525")
         self.is_dark_mode_enabled = self.dark_mode_is_enabled()
-
-        # Reverse background and foreground color, to help cursor recognition.
-        self.caret_foreground_color = QColor(self.emacs_var_dict["eaf-emacs-theme-background-color"])
-        self.caret_background_color = QColor(self.emacs_var_dict["eaf-emacs-theme-foreground-color"])
 
         self.current_url = ""
         self.request_url = ""
@@ -685,6 +680,11 @@ class BrowserBuffer(Buffer):
         self.reset_default_zoom()
         self.buffer_widget.urlChanged.connect(lambda url: self.reset_default_zoom())
 
+        # Build webchannel object.
+        self.channel = QWebChannel()
+        self.channel.registerObject("pyobject", self)
+        self.buffer_widget.web_page.setWebChannel(self.channel)
+
     def notify_print_message(self, file_path, success):
         ''' Notify the print as pdf message.'''
         if success:
@@ -730,22 +730,10 @@ class BrowserBuffer(Buffer):
         ''' Handle fullscreen request.'''
         if request.toggleOn():
             self.enter_fullscreen_request.emit()
-
-            # Move cursor to bottom right corner when fullscreen.
-            self.move_cursor_to_corner()
         else:
             self.exit_fullscreen_request.emit()
 
         request.accept()
-
-    def move_cursor_to_corner(self):
-        '''
-        Move cursor to bottom right corner of screen.
-        Usually call once when fullscreen state,
-        instead hide cursor, because hide cursor may cause bug that cursor is not show after exit fullscreen.
-        '''
-        screen = qApp.primaryScreen()
-        QCursor().setPos(screen, screen.size().width(), screen.size().height())
 
     def should_skip_download_item(self, download_item):
         return download_item.page() != self.buffer_widget.web_page
@@ -1210,6 +1198,12 @@ class BrowserBuffer(Buffer):
                 message_to_emacs("Please install youtube-dl to use this feature.")
         else:
             message_to_emacs("Only videos from YouTube can be downloaded for now.")
+
+    def build_js_bridge_method(self, python_method_name, js_method_name):
+        def _do():
+            self.buffer_widget.execute_js('''{}()'''.format(js_method_name))
+
+        setattr(self, python_method_name, _do)
 
 class ZoomSizeDb(object):
     def __init__(self, dbpath):

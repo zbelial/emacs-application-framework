@@ -22,7 +22,7 @@
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QUrl, QTimer
 from PyQt5.QtGui import QColor, QCursor, QScreen
-from core.browser import BrowserBuffer
+from core.webengine import BrowserBuffer
 from core.utils import touch, interactive, is_port_in_use, eval_in_emacs, message_to_emacs, set_emacs_var, translate_text, open_url_in_new_tab
 from urllib.parse import urlparse
 import os
@@ -90,10 +90,19 @@ class AppBuffer(BrowserBuffer):
         # Record url when url changed.
         self.buffer_widget.urlChanged.connect(self.update_url)
 
+        self.buffer_widget.urlChanged.connect(self.skip_youtube_ads)
+
         # Draw progressbar.
         self.progressbar_progress = 0
+        self.progressbar_color = QColor(self.emacs_var_dict["eaf-emacs-theme-foreground-color"])
+        self.progressbar_height = 2
         self.buffer_widget.loadStarted.connect(self.start_progress)
         self.buffer_widget.loadProgress.connect(self.update_progress)
+        self.is_loading = False
+
+        # Reverse background and foreground color, to help cursor recognition.
+        self.caret_foreground_color = QColor(self.emacs_var_dict["eaf-emacs-theme-background-color"])
+        self.caret_background_color = QColor(self.emacs_var_dict["eaf-emacs-theme-foreground-color"])
 
         # Reset zoom after page loading finish.
         # Otherwise page won't zoom if we call setUrl api in current page.
@@ -108,6 +117,8 @@ class AppBuffer(BrowserBuffer):
     @QtCore.pyqtSlot()
     def start_progress(self):
         ''' Initialize the Progress Bar.'''
+        self.is_loading = True
+
         self.progressbar_progress = 0
         self.update()
 
@@ -126,6 +137,9 @@ class AppBuffer(BrowserBuffer):
             self.caret_js_ready = False
             self.update()
         elif progress == 100:
+            if self.is_loading:
+                self.is_loading = False
+
             self.buffer_widget.load_marker_file()
 
             cursor_foreground_color = ""
@@ -176,7 +190,7 @@ class AppBuffer(BrowserBuffer):
 
                 aria2_args.append("-d") # daemon
                 aria2_args.append("-c") # continue download
-                aria2_args.append("--auto-file-renaming=false") # not auto rename file
+                aria2_args.append("--auto-file-renaming={}".format(str(self.emacs_var_dict["eaf-browser-aria2-auto-file-renaming"])))
                 aria2_args.append("-d {}".format(os.path.expanduser(str(self.emacs_var_dict["eaf-browser-download-path"]))))
 
                 aria2_proxy_host = str(self.emacs_var_dict["eaf-browser-aria2-proxy-host"])
@@ -247,6 +261,18 @@ class AppBuffer(BrowserBuffer):
     def set_adblocker(self, url):
         if self.emacs_var_dict["eaf-browser-enable-adblocker"] == "true" and not self.page_closed:
             self.load_adblocker()
+
+    def skip_youtube_ads(self, url):
+        url = self.buffer_widget.url().toString()
+
+        if (url.startswith("https://www.youtube.com/")) and url != "https://www.youtube.com/":
+            # Trick: add dot after 'com' to get free ad url.
+            urls = url.split("https://www.youtube.com")
+            free_ad_url = "https://www.youtube.com." + urls[1]
+
+            # Use stop and load methods instead setUrl, avoid trigger "urlChanged" signal recursively.
+            self.buffer_widget.stop()
+            self.buffer_widget.load(QUrl(free_ad_url))
 
     def add_password_entry(self):
         self.buffer_widget.eval_js(self.pw_autofill_raw.replace("%1", "''"))
@@ -415,6 +441,9 @@ class AppBuffer(BrowserBuffer):
         text = self.buffer_widget.execute_js("new Readability(document).parse().textContent;")
         self.refresh_page()
         eval_in_emacs('eaf--browser-export-text', ["EAF-BROWSER-TEXT-" + self.url, text])
+
+    def page_is_loading(self):
+        return self.is_loading
 
 class HistoryPage():
     def __init__(self, title, url, hit):
